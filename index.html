@@ -147,9 +147,35 @@
     }
 
     #host-btn:focus { outline: none; }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+    }
+
+    @keyframes floatUp {
+      0%   { transform: translateY(0) rotate(-8deg); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateY(-110vh) rotate(8deg); opacity: 0; }
+    }
+
+    .balloon {
+      position: fixed;
+      bottom: -100px;
+      font-size: 64px;
+      pointer-events: none;
+      z-index: 998;
+      animation: floatUp 5s ease-in forwards;
+    }
   </style>
 </head>
 <body>
+
+  <canvas id="confetti-canvas"></canvas>
 
   <div id="wrap">
     <div id="title">Find the secret word</div>
@@ -264,18 +290,22 @@
       hint('step 2 of 3');
 
     } else if (step === 2) {
+      // Silent swap — T becomes B, no flash, no highlight
       hide('banner-warning');
       hint('step 3 of 3');
       label('Banner');
-      revealBOY();
+      document.getElementById('c8_10').textContent = 'B';
 
     } else {
+      // Highlight BOY + banner + confetti + balloons
+      highlightBOY();
       show('banner-boy');
+      launchCelebration();
       document.getElementById('host-ctrl').style.display = 'none';
     }
   };
 
-  function revealBOY() {
+  function highlightBOY() {
     var coords = [[8,10],[8,11],[8,12]];
     var cells = coords.map(function(rc) {
       return document.getElementById('c' + rc[0] + '_' + rc[1]);
@@ -284,7 +314,6 @@
     cells.forEach(function(td) { td.classList.add('flash'); });
 
     setTimeout(function () {
-      cells[0].textContent = 'B';
       cells.forEach(function(td) { td.classList.remove('flash'); });
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
@@ -292,6 +321,63 @@
         });
       });
     }, 800);
+  }
+
+  function launchCelebration() {
+    launchConfetti();
+    launchBalloons();
+  }
+
+  function launchConfetti() {
+    var canvas = document.getElementById('confetti-canvas');
+    canvas.style.display = 'block';
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var ctx = canvas.getContext('2d');
+    var colors = ['#9FE1CB','#5DCAA5','#EF9F27','#FAC775','#f0ece4','#64B5F6','#ffffff','#1D9E75'];
+    var pieces = [];
+    for (var i = 0; i < 180; i++) {
+      pieces.push({
+        x:     Math.random() * canvas.width,
+        y:     Math.random() * -canvas.height,
+        w:     Math.random() * 11 + 5,
+        h:     Math.random() * 6 + 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speed: Math.random() * 3 + 2,
+        drift: (Math.random() - 0.5) * 1.5,
+        angle: Math.random() * Math.PI * 2,
+        spin:  (Math.random() - 0.5) * 0.15
+      });
+    }
+    (function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var live = false;
+      pieces.forEach(function(p) {
+        p.y += p.speed; p.x += p.drift; p.angle += p.spin;
+        if (p.y < canvas.height + 20) live = true;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+      });
+      if (live) requestAnimationFrame(draw);
+      else canvas.style.display = 'none';
+    })();
+  }
+
+  function launchBalloons() {
+    var items = ['🎈','🎉','🎈','🎊','🎈','🎉','🎈'];
+    items.forEach(function(emoji, i) {
+      var el = document.createElement('div');
+      el.className = 'balloon';
+      el.textContent = emoji;
+      el.style.left  = (8 + i * 13) + '%';
+      el.style.animationDelay = (i * 0.25) + 's';
+      document.body.appendChild(el);
+      setTimeout(function() { el.remove(); }, 6000);
+    });
   }
 
   function show(id) { document.getElementById(id).classList.add('show'); }
