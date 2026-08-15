@@ -123,11 +123,11 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      opacity: 0.07;
+      opacity: 0.12;
       transition: opacity 0.3s;
     }
 
-    #host-ctrl:hover { opacity: 0.22; }
+    #host-ctrl:hover { opacity: 0.45; }
 
     #step-hint {
       font-size: 9px;
@@ -184,8 +184,10 @@
   applyOffset();
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === '[') { offset -= 1; applyOffset(); }
-    if (e.key === ']') { offset += 1; applyOffset(); }
+    if (e.key === '[')      { offset -= 1; applyOffset(); }
+    if (e.key === ']')      { offset += 1; applyOffset(); }
+    if (e.key === ' ')      { e.preventDefault(); advance(); }  // spacebar = next step
+    if (e.key === 'Enter')  { e.preventDefault(); advance(); }  // Enter = next step too
   });
 
   // ── Grid construction ───────────────────────────────────────────────────────
