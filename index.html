@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gender Reveal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Nudgeable wrapper — transform shifts entire layout vertically */
+    #wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 16px 28px;
+      width: 100%;
+    }
+
+    #title {
+      font-size: 28px;
+      font-weight: bold;
+      font-family: monospace;
+      color: #f0ece4;
+      letter-spacing: 2px;
+    }
+
+    #subtitle {
+      font-size: 14px;
+      font-family: monospace;
+      color: #555;
+      letter-spacing: 1px;
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 3px;
+    }
+
+    td {
+      width: 48px;
+      height: 48px;
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 21px;
+      font-weight: bold;
+      font-family: monospace;
+      color: #d0ccc4;
+      user-select: none;
+      cursor: default;
+      transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+    }
+
+    td.flash {
+      background-color: #EF9F27 !important;
+      color: #1a0e00 !important;
+      border-color: #c07d10 !important;
+      transition: none !important;
+    }
+
+    td.revealed {
+      background-color: #1a2e27;
+      color: #5DCAA5;
+      border-color: #1D9E75;
+    }
+
+    #banner-area {
+      width: 100%;
+      max-width: 726px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .banner {
+      display: none;
+      width: 100%;
+      padding: 14px 24px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .banner.show { display: block; }
+
+    #banner-warning {
+      font-size: 20px;
+      background: #2a1a0a;
+      border: 2px solid #633806;
+      color: #FAC775;
+    }
+
+    #banner-boy {
+      font-size: 30px;
+      letter-spacing: 4px;
+      background: #1a2e27;
+      border: 2px solid #1D9E75;
+      color: #9FE1CB;
+      padding: 20px 32px;
+    }
+
+    /* Host control — nearly invisible, fixed so nudging doesn't move it */
+    #host-ctrl {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.07;
+      transition: opacity 0.3s;
+    }
+
+    #host-ctrl:hover { opacity: 0.22; }
+
+    #step-hint {
+      font-size: 9px;
+      font-family: monospace;
+      color: #1a1a1a;
+    }
+
+    #host-btn {
+      padding: 5px 10px;
+      font-size: 10px;
+      font-family: monospace;
+      color: #1c1c1c;
+      background: #0f0f0f;
+      border: 1px solid #1c1c1c;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    #host-btn:focus { outline: none; }
+  </style>
+</head>
+<body>
+
+  <div id="wrap">
+    <div id="title">Find the secret word</div>
+    <div id="subtitle">First to spot it calls it out</div>
+    <table id="grid"></table>
+    <div id="banner-area">
+      <div class="banner" id="banner-warning">Hmm, are you sure? Look again&hellip;</div>
+      <div class="banner" id="banner-boy">It&rsquo;s a boy!</div>
+    </div>
+  </div>
+
+  <div id="host-ctrl">
+    <span id="step-hint">step 1 of 3</span>
+    <button id="host-btn" onclick="advance()">Reveal</button>
+  </div>
+
+<script>
+(function () {
+
+  // ── Vertical nudge — press [ to shift up 1px, ] to shift down 1px ──────────
+  // Seed from ?o=N in URL so a dialled-in offset survives a page reload.
+  // Each row is 51px tall (48px cell + 3px gap); nudge until the TV's
+  // hardware line disappears into a gap between rows.
+  var wrap = document.getElementById('wrap');
+  var offset = parseInt(new URLSearchParams(location.search).get('o') || '0', 10) || 0;
+
+  function applyOffset() {
+    wrap.style.transform = 'translateY(' + offset + 'px)';
+    document.getElementById('step-hint').textContent =
+      'step 1 of 3  o=' + offset;
+  }
+  applyOffset();
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '[') { offset -= 1; applyOffset(); }
+    if (e.key === ']') { offset += 1; applyOffset(); }
+  });
+
+  // ── Grid construction ───────────────────────────────────────────────────────
+  var R = 14, C = 14;
+  var g = [];
+  for (var i = 0; i < R; i++) { g.push([]); for (var j = 0; j < C; j++) g[i].push(null); }
+
+  function place(word, r, c, dr, dc) {
+    for (var i = 0; i < word.length; i++) g[r + i*dr][c + i*dc] = word[i];
+  }
+
+  // Names
+  place('VICTORIA', 0,5,0,1);
+  place('DAINI',    0,0,1,0);
+  place('OSHO',     3,0,1,0);
+  place('DEBBY',    2,9,0,1);
+  place('DARA',     7,10,1,0);
+  place('TRACY',    5,2,0,1);
+  place('SAM',      1,13,1,0);
+  place('AYO',      11,7,0,1);
+  place('FUNMI',    8,0,0,1);
+  place('ADEYEMI',  6,5,0,1);
+  place('ESTHER',   4,8,1,0);
+  place('DTA',      12,11,0,1);
+  place('IFE',      9,3,0,1);
+  place('ONIZE',    10,1,0,1);
+  place('BUNMI',    13,7,0,1);
+
+  // Baby words
+  place('LOVE',  1,4,0,1);
+  place('BORN',  3,10,0,1);
+  place('BUMP',  7,1,0,1);
+  place('BABY',  5,13,1,0);
+  place('HOPE',  11,0,0,1);
+  place('NEST',  0,13,1,0);
+  place('GIFT',  12,3,0,1);
+  place('SWEET', 9,8,0,1);
+  place('CRIB',  6,0,1,0);
+  place('TINY',  4,2,0,1);
+
+  // Decoys
+  place('CURL', 2,1,0,1);
+  place('TOY',  8,10,0,1);   // swaps to BOY on step 2
+
+  // Fill empty cells — filler avoids B, O, Y, T so BOY/TOY can't form elsewhere
+  var FL = 'CDFGHJKLMNPQRSVWXZ';
+  for (var r = 0; r < R; r++)
+    for (var c = 0; c < C; c++)
+      if (g[r][c] === null)
+        g[r][c] = FL[Math.floor(Math.random() * FL.length)];
+
+  // Render table
+  var table = document.getElementById('grid');
+  for (var r = 0; r < R; r++) {
+    var tr = document.createElement('tr');
+    for (var c = 0; c < C; c++) {
+      var td = document.createElement('td');
+      td.id = 'c' + r + '_' + c;
+      td.textContent = g[r][c];
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+
+  // ── Step machine ────────────────────────────────────────────────────────────
+  var step = 0;
+
+  window.advance = function () {
+    if (step >= 3) return;
+    step++;
+
+    if (step === 1) {
+      show('banner-warning');
+      hint('step 2 of 3');
+
+    } else if (step === 2) {
+      hide('banner-warning');
+      hint('step 3 of 3');
+      label('Banner');
+      revealBOY();
+
+    } else {
+      show('banner-boy');
+      document.getElementById('host-ctrl').style.display = 'none';
+    }
+  };
+
+  function revealBOY() {
+    var coords = [[8,10],[8,11],[8,12]];
+    var cells = coords.map(function(rc) {
+      return document.getElementById('c' + rc[0] + '_' + rc[1]);
+    });
+
+    cells.forEach(function(td) { td.classList.add('flash'); });
+
+    setTimeout(function () {
+      cells[0].textContent = 'B';
+      cells.forEach(function(td) { td.classList.remove('flash'); });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          cells.forEach(function(td) { td.classList.add('revealed'); });
+        });
+      });
+    }, 800);
+  }
+
+  function show(id) { document.getElementById(id).classList.add('show'); }
+  function hide(id) { document.getElementById(id).classList.remove('show'); }
+  function hint(t)  { document.getElementById('step-hint').textContent = t; }
+  function label(t) { document.getElementById('host-btn').textContent = t; }
+
+})();
+</script>
+</body>
+</html>
