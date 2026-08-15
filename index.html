@@ -64,6 +64,19 @@
       transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
     }
 
+    /* Fullscreen nudge — shown only when browser chrome is visible */
+    #fullscreen-hint {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-family: monospace;
+      color: #333;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
     td.flash {
       background-color: #EF9F27 !important;
       color: #1a0e00 !important;
@@ -176,6 +189,7 @@
 <body>
 
   <canvas id="confetti-canvas"></canvas>
+  <div id="fullscreen-hint">Press F11 for fullscreen</div>
 
   <div id="wrap">
     <div id="title">It&rsquo;s right in front of you</div>
@@ -194,6 +208,30 @@
 
 <script>
 (function () {
+
+  // ── Responsive cell sizing — fits grid to available viewport ────────────────
+  function sizeCells() {
+    var ROWS = 14, GAP = 3, SPACING = GAP * (ROWS - 1);
+    // Rough height used by title + subtitle + gaps + banner area + padding
+    var overhead = 210;
+    var availH = window.innerHeight - overhead - SPACING;
+    var availW = window.innerWidth  - 40;   // side padding
+    var cellH  = Math.floor(availH / ROWS);
+    var cellW  = Math.floor(availW / ROWS);
+    var size   = Math.min(cellH, cellW, 48); // never exceed designed 48px
+    var fs     = Math.max(12, Math.round(size * 0.44));
+
+    document.querySelectorAll('#grid td').forEach(function(td) {
+      td.style.width    = size + 'px';
+      td.style.height   = size + 'px';
+      td.style.fontSize = fs   + 'px';
+    });
+
+    // Hide fullscreen hint once we're actually fullscreen
+    var hint = document.getElementById('fullscreen-hint');
+    if (hint) hint.style.display = window.innerHeight >= screen.height - 10 ? 'none' : 'block';
+  }
+  window.addEventListener('resize', sizeCells);
 
   // ── Vertical nudge — press [ to shift up 1px, ] to shift down 1px ──────────
   // Seed from ?o=N in URL so a dialled-in offset survives a page reload.
@@ -277,6 +315,8 @@
     }
     table.appendChild(tr);
   }
+
+  sizeCells();
 
   // ── Step machine ────────────────────────────────────────────────────────────
   var step = 0;
