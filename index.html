@@ -23,8 +23,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
-      padding: 20px 16px 28px;
+      gap: 8px;
+      padding: 10px 16px 12px;
       width: 100%;
     }
 
@@ -93,7 +93,7 @@
     #banner-area {
       width: 100%;
       max-width: 726px;
-      min-height: 64px;
+      min-height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -189,7 +189,7 @@
 <body>
 
   <canvas id="confetti-canvas"></canvas>
-  <div id="fullscreen-hint">Press F11 for fullscreen</div>
+  <div id="fullscreen-hint">Press F on keyboard for fullscreen</div>
 
   <div id="wrap">
     <div id="title">It&rsquo;s right in front of you</div>
@@ -212,13 +212,13 @@
   // ── Responsive cell sizing — fits grid to available viewport ────────────────
   function sizeCells() {
     var ROWS = 14, GAP = 3, SPACING = GAP * (ROWS - 1);
-    // Rough height used by title + subtitle + gaps + banner area + padding
-    var overhead = 210;
+    // Compact layout: title + subtitle + gaps + banner + padding
+    var overhead = 140;
     var availH = window.innerHeight - overhead - SPACING;
-    var availW = window.innerWidth  - 40;   // side padding
+    var availW = window.innerWidth  - 32;
     var cellH  = Math.floor(availH / ROWS);
     var cellW  = Math.floor(availW / ROWS);
-    var size   = Math.min(cellH, cellW, 48); // never exceed designed 48px
+    var size   = Math.min(cellH, cellW, 72); // cap at 72px (50% bigger than original 48)
     var fs     = Math.max(12, Math.round(size * 0.44));
 
     document.querySelectorAll('#grid td').forEach(function(td) {
@@ -227,9 +227,8 @@
       td.style.fontSize = fs   + 'px';
     });
 
-    // Hide fullscreen hint once we're actually fullscreen
     var hint = document.getElementById('fullscreen-hint');
-    if (hint) hint.style.display = window.innerHeight >= screen.height - 10 ? 'none' : 'block';
+    if (hint) hint.style.display = !!document.fullscreenElement ? 'none' : 'block';
   }
   window.addEventListener('resize', sizeCells);
 
@@ -250,9 +249,20 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === '[')      { offset -= 1; applyOffset(); }
     if (e.key === ']')      { offset += 1; applyOffset(); }
-    if (e.key === ' ')      { e.preventDefault(); advance(); }  // spacebar = next step
-    if (e.key === 'Enter')  { e.preventDefault(); advance(); }  // Enter = next step too
+    if (e.key === ' ')      { e.preventDefault(); advance(); }
+    if (e.key === 'Enter')  { e.preventDefault(); advance(); }
+    if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
   });
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      (document.documentElement.requestFullscreen
+        || document.documentElement.webkitRequestFullscreen
+        || function(){}).call(document.documentElement);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+    }
+  }
 
   // ── Grid construction ───────────────────────────────────────────────────────
   var R = 14, C = 14;
