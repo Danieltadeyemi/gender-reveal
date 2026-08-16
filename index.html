@@ -535,16 +535,16 @@
     if (type) allWords.push({ word: word, cells: cells, type: type });
   }
 
-  // Names
+  // Names (18 total)
   place('VICTORIA', 0,5,0,1, 'name');
   place('DAINI',    0,0,1,0, 'name');
   place('OSHO',     3,0,1,0, 'name');
-  place('DEBBY',    2,9,0,1, 'name');
+  place('DEBBY',    2,8,0,1, 'name');  // shifted left 1 col — no longer shares col 13 with SAM
   place('DARA',     0,1,0,1, 'name');
   place('TRACY',    5,2,0,1, 'name');
-  place('SAM',      1,13,1,0,'name');
+  place('SAM',      1,13,1,0,'name');  // now clean — NEST removed
   place('AYO',      11,7,0,1,'name');
-  place('FUNMI',    8,0,0,1, 'name');
+  place('FUNMI',    8,0,0,1, 'name');  // now clean — CRIB removed
   place('ADEYEMI',  6,5,0,1, 'name');
   place('ESTHER',   4,8,1,0, 'name');
   place('DTA',      12,11,0,1,'name');
@@ -553,17 +553,13 @@
   place('BUNMI',    13,7,0,1,'name');
   place('SEMILORE', 3,1,0,1, 'name');
   place('SANMI',    4,9,0,1, 'name');
+  place('TOLU',     7,1,0,1, 'name');  // new — row 7 cols 1-4
 
-  // Baby words
+  // Baby words (5 remaining — dropped BORN, BUMP, CRIB, HOPE, NEST)
   place('LOVE',  1,4,0,1, 'baby');
-  place('BORN',  3,10,0,1,'baby');
-  place('BUMP',  7,1,0,1, 'baby');
   place('BABY',  5,13,1,0,'baby');
-  place('HOPE',  11,0,0,1,'baby');
-  place('NEST',  0,13,1,0,'baby');
   place('GIFT',  12,3,0,1,'baby');
   place('SWEET', 9,8,0,1, 'baby');
-  place('CRIB',  6,0,1,0, 'baby');
   place('TINY',  4,2,0,1, 'baby');
 
   // Decoys (no type — not tracked for reveal-all)
