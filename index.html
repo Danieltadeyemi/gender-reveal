@@ -115,6 +115,55 @@
       margin-top: 52px;
     }
 
+    /* ── Prediction / voting screen ────────────────────────────────────────── */
+    #vote-screen {
+      position: fixed;
+      inset: 0;
+      background: #0f0f0f;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      z-index: 1800;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+    #vote-screen.show    { display: flex; }
+    #vote-screen.visible { opacity: 1; }
+
+    #vote-question {
+      font-size: clamp(18px, 3vw, 28px);
+      font-weight: bold;
+      font-family: monospace;
+      color: #f0ece4;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .vote-opt {
+      font-size: clamp(16px, 2.4vw, 24px);
+      font-family: monospace;
+      color: #777;
+      padding: 14px 36px;
+      border: 1px solid #262626;
+      border-radius: 4px;
+      letter-spacing: 2px;
+      min-width: min(440px, 80vw);
+      text-align: center;
+    }
+
+    #vote-hint {
+      font-size: 13px;
+      font-family: monospace;
+      color: #2e2e2e;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 18px;
+    }
+
     /* Fullscreen nudge — shown only when browser chrome is visible */
     #fullscreen-hint {
       position: fixed;
@@ -305,6 +354,17 @@
     <div id="intro-prompt">Press SPACE to begin</div>
   </div>
 
+  <!-- Prediction screen — shown between countdown and puzzle -->
+  <div id="vote-screen">
+    <div id="vote-question">Would it be…</div>
+    <div class="vote-opt">🎀 &nbsp;A girl again?</div>
+    <div class="vote-opt">👦 &nbsp;A boy?</div>
+    <div class="vote-opt">👶👶 &nbsp;Twins?</div>
+    <div class="vote-opt">👶👶👶 &nbsp;Triplets?</div>
+    <div class="vote-opt">🌟 &nbsp;Something else?</div>
+    <div id="vote-hint">Space to reveal the puzzle</div>
+  </div>
+
   <canvas id="confetti-canvas"></canvas>
   <div id="fullscreen-hint">Press F on keyboard for fullscreen</div>
 
@@ -453,10 +513,24 @@
   }
 
   function revealPuzzle() {
-    appState = 'puzzle';
     var intro = document.getElementById('intro');
     intro.style.opacity = '0';
-    setTimeout(function () { intro.style.display = 'none'; }, 700);
+    setTimeout(function () {
+      intro.style.display = 'none';
+      appState = 'voting';
+      var vs = document.getElementById('vote-screen');
+      vs.classList.add('show');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { vs.classList.add('visible'); });
+      });
+    }, 700);
+  }
+
+  function showPuzzle() {
+    appState = 'puzzle';
+    var vs = document.getElementById('vote-screen');
+    vs.classList.remove('visible');
+    setTimeout(function () { vs.classList.remove('show'); }, 700);
   }
 
   // ── Responsive cell sizing — fits grid to available viewport ────────────────
@@ -503,8 +577,9 @@
 
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      if (appState === 'intro')    { startCountdown(); }
-      else if (appState === 'puzzle') { advance(); }
+      if (appState === 'intro')      { startCountdown(); }
+      else if (appState === 'voting')  { showPuzzle(); }
+      else if (appState === 'puzzle')  { advance(); }
       // 'counting' → spacebar does nothing, let it run
     }
   });
