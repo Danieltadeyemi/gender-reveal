@@ -689,9 +689,16 @@
       requestAnimationFrame(function () { overlay.classList.add('visible'); });
     });
 
-    // Highlight each word sequentially with a short delay between each
+    // Only highlight words whose cells all still hold the expected letters.
+    // Some words share cells; the last placement wins, making earlier words
+    // incomplete in the grid — skip those rather than showing broken highlights.
     var delay = 500;
     allWords.forEach(function(w) {
+      var intact = w.cells.every(function(rc, i) {
+        return g[rc[0]][rc[1]] === w.word[i];
+      });
+      if (!intact) return;   // skip overwritten words
+
       setTimeout(function () {
         var table = document.getElementById('grid-final');
         w.cells.forEach(function(rc) {
