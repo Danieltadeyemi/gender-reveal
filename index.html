@@ -281,19 +281,59 @@
     return audioCtx;
   }
 
-  function beep(freq, dur, vol, delay) {
+  function beep(freq, dur, vol, delay, type) {
+    try {
+      var ctx = getCtx();
+      var osc = ctx.createOscillator();
+      var g   = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      var t = ctx.currentTime + (delay || 0);
+      g.gain.setValueAtTime(vol || 0.25, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.05);
+    } catch(e) {}
+  }
+
+  // Upward frequency sweep — "whoosh" effect
+  function playWhoosh() {
     try {
       var ctx = getCtx();
       var osc = ctx.createOscillator();
       var g   = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
       osc.type = 'sine';
-      osc.frequency.value = freq;
-      var t = ctx.currentTime + (delay || 0);
-      g.gain.setValueAtTime(vol || 0.25, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      osc.start(t); osc.stop(t + dur + 0.01);
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.45);
+      g.gain.setValueAtTime(0.35, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+      osc.start(); osc.stop(ctx.currentTime + 0.6);
     } catch(e) {}
+  }
+
+  // Per-step sounds
+  function playStepSound(s) {
+    if (s === 1) {
+      // Descending suspense: A → G → F (minor feel)
+      beep(440, 0.25, 0.30, 0.00, 'triangle');
+      beep(392, 0.25, 0.28, 0.18, 'triangle');
+      beep(349, 0.45, 0.25, 0.36, 'triangle');
+    } else if (s === 2) {
+      // Subtle shimmer: two quick high pings
+      beep(1319, 0.07, 0.18, 0.00, 'sine');
+      beep(1047, 0.10, 0.14, 0.08, 'sine');
+    } else if (s === 3) {
+      // Whoosh into triumphant C-major fanfare
+      playWhoosh();
+      beep(261,  0.30, 0.45, 0.30, 'triangle');  // C4
+      beep(329,  0.30, 0.45, 0.44, 'triangle');  // E4
+      beep(392,  0.30, 0.45, 0.58, 'triangle');  // G4
+      beep(523,  0.40, 0.50, 0.72, 'triangle');  // C5
+      beep(659,  0.40, 0.50, 0.86, 'triangle');  // E5
+      beep(784,  0.50, 0.50, 1.00, 'triangle');  // G5
+      beep(1047, 0.70, 0.50, 1.14, 'triangle');  // C6
+    }
   }
 
   // ── Countdown ────────────────────────────────────────────────────────────────
@@ -323,10 +363,12 @@
       } else {
         countEl.textContent = 'GO!';
         countEl.style.color = '#5DCAA5';
-        // Celebratory ascending chord
-        beep(523, 0.35, 0.45, 0.00);
-        beep(659, 0.35, 0.45, 0.10);
-        beep(784, 0.50, 0.45, 0.20);
+        // Rising chord landing on a triumphant major triad
+        beep(392,  0.25, 0.40, 0.00, 'triangle');  // G4
+        beep(523,  0.30, 0.45, 0.14, 'triangle');  // C5
+        beep(659,  0.35, 0.50, 0.28, 'triangle');  // E5
+        beep(784,  0.55, 0.55, 0.42, 'triangle');  // G5
+        beep(1047, 0.70, 0.50, 0.55, 'triangle');  // C6
         clearInterval(timer);
         setTimeout(revealPuzzle, 1100);
       }
@@ -472,18 +514,21 @@
     step++;
 
     if (step === 1) {
+      playStepSound(1);
       show('banner-warning');
       hint('step 2 of 3');
 
     } else if (step === 2) {
       // Silent swap — T becomes B, no flash, no highlight
+      playStepSound(2);
       hide('banner-warning');
       hint('step 3 of 3');
       label('Banner');
       document.getElementById('c8_10').textContent = 'B';
 
     } else {
-      // Highlight BOY + banner + confetti + balloons
+      // Whoosh + fanfare + highlight BOY + banner + confetti + balloons
+      playStepSound(3);
       highlightBOY();
       show('banner-boy');
       launchCelebration();
