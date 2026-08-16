@@ -64,6 +64,56 @@
       transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
     }
 
+    /* ── Intro countdown screen ─────────────────────────────────────────────── */
+    #intro {
+      position: fixed;
+      inset: 0;
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      transition: opacity 0.7s ease;
+    }
+
+    #intro-label {
+      font-size: 18px;
+      font-family: monospace;
+      color: #444;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    #count-num {
+      font-family: monospace;
+      font-weight: bold;
+      font-size: clamp(100px, 28vw, 260px);
+      color: #EF9F27;
+      line-height: 1;
+      min-width: 3ch;
+      text-align: center;
+      will-change: transform;
+    }
+
+    #count-num.tick {
+      animation: countTick 0.18s ease-out forwards;
+    }
+
+    @keyframes countTick {
+      0%   { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+
+    #intro-prompt {
+      font-size: 15px;
+      font-family: monospace;
+      color: #2e2e2e;
+      letter-spacing: 3px;
+      margin-top: 52px;
+    }
+
     /* Fullscreen nudge — shown only when browser chrome is visible */
     #fullscreen-hint {
       position: fixed;
@@ -188,6 +238,13 @@
 </head>
 <body>
 
+  <!-- Intro countdown overlay -->
+  <div id="intro">
+    <div id="intro-label">Gender Reveal</div>
+    <div id="count-num">30</div>
+    <div id="intro-prompt">Press SPACE to begin</div>
+  </div>
+
   <canvas id="confetti-canvas"></canvas>
   <div id="fullscreen-hint">Press F on keyboard for fullscreen</div>
 
@@ -208,6 +265,80 @@
 
 <script>
 (function () {
+
+  // ── App state ────────────────────────────────────────────────────────────────
+  // 'intro'  → waiting on spacebar to start countdown
+  // 'counting' → countdown running
+  // 'puzzle' → word search active, spacebar advances steps
+  var appState = 'intro';
+
+  // ── Audio ─────────────────────────────────────────────────────────────────────
+  var audioCtx = null;
+
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function beep(freq, dur, vol, delay) {
+    try {
+      var ctx = getCtx();
+      var osc = ctx.createOscillator();
+      var g   = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      var t = ctx.currentTime + (delay || 0);
+      g.gain.setValueAtTime(vol || 0.25, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.01);
+    } catch(e) {}
+  }
+
+  // ── Countdown ────────────────────────────────────────────────────────────────
+  function startCountdown() {
+    appState = 'counting';
+    var prompt   = document.getElementById('intro-prompt');
+    var countEl  = document.getElementById('count-num');
+    prompt.style.display = 'none';
+
+    var n = 30;
+    beep(440, 0.08, 0.3);   // tick for the initial 30
+
+    var timer = setInterval(function () {
+      n--;
+
+      // Animate the number change
+      countEl.classList.remove('tick');
+      void countEl.offsetWidth;   // force reflow to restart animation
+      countEl.classList.add('tick');
+
+      if (n > 0) {
+        countEl.textContent = n;
+        // Higher pitch + louder for last 5 seconds
+        var freq = n <= 5 ? 880 : 440;
+        var vol  = n <= 5 ? 0.5 : 0.25;
+        beep(freq, 0.08, vol);
+      } else {
+        countEl.textContent = 'GO!';
+        countEl.style.color = '#5DCAA5';
+        // Celebratory ascending chord
+        beep(523, 0.35, 0.45, 0.00);
+        beep(659, 0.35, 0.45, 0.10);
+        beep(784, 0.50, 0.45, 0.20);
+        clearInterval(timer);
+        setTimeout(revealPuzzle, 1100);
+      }
+    }, 1000);
+  }
+
+  function revealPuzzle() {
+    appState = 'puzzle';
+    var intro = document.getElementById('intro');
+    intro.style.opacity = '0';
+    setTimeout(function () { intro.style.display = 'none'; }, 700);
+  }
 
   // ── Responsive cell sizing — fits grid to available viewport ────────────────
   function sizeCells() {
@@ -247,11 +378,16 @@
   applyOffset();
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === '[')      { offset -= 1; applyOffset(); }
-    if (e.key === ']')      { offset += 1; applyOffset(); }
-    if (e.key === ' ')      { e.preventDefault(); advance(); }
-    if (e.key === 'Enter')  { e.preventDefault(); advance(); }
+    if (e.key === '[')               { offset -= 1; applyOffset(); }
+    if (e.key === ']')               { offset += 1; applyOffset(); }
     if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
+
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (appState === 'intro')    { startCountdown(); }
+      else if (appState === 'puzzle') { advance(); }
+      // 'counting' → spacebar does nothing, let it run
+    }
   });
 
   function toggleFullscreen() {
